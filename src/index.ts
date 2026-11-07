@@ -113,11 +113,12 @@ export default function (pi: ExtensionAPI) {
 	pi.registerTool({
 		name: "fetch",
 		label: "Fetch",
-		description: "Fetch URL content directly and return readable text. Use this when the user asks to inspect a specific link.",
+		description: "Fetch URL content and convert HTML to Markdown, extracting main content by default. Set extractMainContent=false to read the whole page. Does not execute page JavaScript. Use this when the user asks to inspect a specific link.",
 		promptSnippet: "Fetch the content of a specific URL.",
 		parameters: Type.Object({
 			url: Type.Optional(Type.String({ description: "Single URL to fetch" })),
 			urls: Type.Optional(Type.Array(Type.String(), { description: "Multiple URLs to fetch" })),
+			extractMainContent: Type.Optional(Type.Boolean({ description: "Extract main content from HTML; false keeps the whole page. Defaults to fetch.extractMainContent in config (true)." })),
 		}),
 		renderCall(args, theme) {
 			const urls = normalizeList((args as { url?: unknown }).url, (args as { urls?: unknown }).urls);
@@ -155,7 +156,11 @@ export default function (pi: ExtensionAPI) {
 					details: { phase: "fetch", current: i + 1, total: urls.length, url },
 				});
 				try {
-					fetched.push(await fetchOne(url, { ...config.fetch, signal }));
+					fetched.push(await fetchOne(url, {
+						...config.fetch,
+						extractMainContent: params.extractMainContent ?? config.fetch.extractMainContent,
+						signal,
+					}));
 				} catch (err) {
 					const message = err instanceof Error ? err.message : String(err);
 					fetched.push({ url, title: url, content: `Error: ${message}`, truncated: false, originalLength: 0, error: message });
@@ -178,6 +183,7 @@ export default function (pi: ExtensionAPI) {
 						title: result.title,
 						truncated: result.truncated,
 						originalLength: result.originalLength,
+						extractedMainContent: "extractedMainContent" in result ? result.extractedMainContent : undefined,
 						error: "error" in result ? result.error : undefined,
 					})),
 				},

@@ -3,9 +3,9 @@
 Lightweight web access package for Pi. It registers only two tools:
 
 - `web_search` — search with Exa, Tavily, Brave Search, and Doubao Search
-- `fetch` — fetch URL content directly
+- `fetch` — fetch URLs, convert HTML to Markdown, and optionally extract main content
 
-No curator UI, no browser cookie access, no Gemini/Perplexity, no video analysis, no background servers, no storage cache, and no package runtime dependencies.
+No curator UI, no browser cookie access, no Gemini/Perplexity, no video analysis, no background servers, no storage cache, and no browser runtime required. HTML processing uses Turndown, its GFM plugin, Mozilla Readability, and Linkedom.
 
 ## Architecture
 
@@ -27,7 +27,8 @@ flowchart LR
     Fetch --> GitHub[GitHub API for GitHub URLs]
     Fetch --> HTTP[Direct HTTP fetch]
     GitHub --> Agent
-    HTTP --> Agent
+    HTTP --> Markdown[Readability + HTML to Markdown]
+    Markdown --> Agent
 ```
 
 `balanced` mode shuffles every provider/key pair in one pool. `auto` preserves provider priority while rotating keys inside each provider. Failed targets fall through to the next target in the generated plan.
@@ -52,7 +53,8 @@ flowchart LR
   },
   "fetch": {
     "timeoutMs": 20000,
-    "maxChars": 30000
+    "maxChars": 30000,
+    "extractMainContent": true
   }
 }
 ```
@@ -159,7 +161,36 @@ or:
 }
 ```
 
-`fetch` is plain fetch: no prompt, no AI analysis.
+`fetch` does not use AI analysis or a third-party extraction API.
+
+HTML pages are converted locally to Markdown, preserving headings, links, images,
+lists, quotes, code blocks (including indentation), and tables. Relative links and
+image URLs are resolved using the final URL after redirects and any HTML `<base>`.
+Unsafe link schemes, scripts, styles, and hidden elements are removed. Simple
+tables become GFM tables; merged cells are flattened rather than reproducing
+`rowspan`/`colspan` layout. Non-HTML content (Markdown, plain text, JSON, XML)
+and the existing GitHub API/raw-file paths are returned without conversion.
+
+`fetch.extractMainContent` defaults to `true`: Mozilla Readability tries to isolate
+the main article and remove navigation/footer noise. If it returns no usable
+content or throws, conversion falls back to the cleaned whole page. Extraction
+is heuristic and may omit content on non-article pages; disable it to inspect
+navigation, indexes, or a page whose extraction is incomplete:
+
+```json
+{
+  "url": "https://example.com/docs",
+  "extractMainContent": false
+}
+```
+
+The per-call option overrides the config default and applies to all URLs in a
+batch. `details.results[].extractedMainContent` indicates whether extraction
+succeeded for HTML pages. Truncation happens after Markdown conversion.
+
+HTTP fetch and DOM parsing **do not execute JavaScript** or load subresources.
+Client-rendered pages may therefore return little content. No browser or external
+rendering service is included.
 
 GitHub URLs use the GitHub API for stable extraction:
 
@@ -179,7 +210,7 @@ Git and local development alternatives:
 
 ```bash
 pi install git:github.com/smithyyang/pi-web-lite
-pi -e ./src/index.ts
+pi --no-extensions -e ./src/index.ts
 ```
 
 Disable/remove the old `pi-web-access` package first if both register `web_search`.

@@ -1,8 +1,10 @@
+import { htmlToMarkdown } from "./html.ts";
 import { requestSignal, truncateText } from "./utils.ts";
 
 export interface FetchOptions {
 	timeoutMs: number;
 	maxChars: number;
+	extractMainContent?: boolean;
 	signal?: AbortSignal;
 }
 
@@ -12,6 +14,7 @@ export interface FetchResult {
 	content: string;
 	truncated: boolean;
 	originalLength: number;
+	extractedMainContent?: boolean;
 }
 
 interface GitHubRepo {
@@ -42,36 +45,7 @@ function headers(): HeadersInit {
 	return headers;
 }
 
-function decodeHtmlEntities(text: string): string {
-	return text
-		.replace(/&nbsp;/g, " ")
-		.replace(/&amp;/g, "&")
-		.replace(/&lt;/g, "<")
-		.replace(/&gt;/g, ">")
-		.replace(/&quot;/g, '"')
-		.replace(/&#39;/g, "'")
-		.replace(/&#x([0-9a-f]+);/gi, (_m, hex) => String.fromCodePoint(Number.parseInt(hex, 16)))
-		.replace(/&#(\d+);/g, (_m, num) => String.fromCodePoint(Number.parseInt(num, 10)));
-}
-
-function htmlToText(html: string): { title: string; text: string } {
-	const title = decodeHtmlEntities(html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]?.replace(/\s+/g, " ").trim() || "Untitled");
-	const body = html
-		.replace(/<script\b[\s\S]*?<\/script>/gi, " ")
-		.replace(/<style\b[\s\S]*?<\/style>/gi, " ")
-		.replace(/<svg\b[\s\S]*?<\/svg>/gi, " ")
-		.replace(/<noscript\b[\s\S]*?<\/noscript>/gi, " ")
-		.replace(/<(h[1-6]|p|li|br|div|section|article|pre|blockquote)\b[^>]*>/gi, "\n")
-		.replace(/<[^>]+>/g, " ");
-	const text = decodeHtmlEntities(body)
-		.split("\n")
-		.map((line) => line.replace(/[ \t]+/g, " ").trim())
-		.filter(Boolean)
-		.join("\n");
-	return { title, text };
-}
-
-async function fetchText(url: string, options: FetchOptions, extraHeaders?: HeadersInit): Promise<{ text: string; contentType: string }> {
+async function fetchText(url: string, options: FetchOptions, extraHeaders?: HeadersInit): Promise<{ text: string; contentType: string; finalUrl: string }> {
 	const response = await fetch(url, {
 		headers: extraHeaders,
 		signal: requestSignal(options.timeoutMs, options.signal),
@@ -80,7 +54,7 @@ async function fetchText(url: string, options: FetchOptions, extraHeaders?: Head
 		const errorText = await response.text();
 		throw new Error(`Fetch error ${response.status} for ${url}: ${errorText.slice(0, 300)}`);
 	}
-	return { text: await response.text(), contentType: response.headers.get("content-type") || "" };
+	return { text: await response.text(), contentType: response.headers.get("content-type") || "", finalUrl: response.url || url };
 }
 
 async function githubJson<T>(url: string, options: FetchOptions): Promise<T> {
@@ -170,10 +144,11 @@ async function fetchGitHub(url: URL, options: FetchOptions): Promise<Omit<FetchR
 }
 
 async function fetchGeneric(url: string, options: FetchOptions): Promise<Omit<FetchResult, "truncated" | "originalLength">> {
-	const { text, contentType } = await fetchText(url, options, { "User-Agent": "pi-web-lite" });
-	if (contentType.includes("text/html") || /^\s*</.test(text)) {
-		const converted = htmlToText(text);
-		return { url, title: converted.title, content: converted.text.trim() };
+	const { text, contentType, finalUrl } = await fetchText(url, options, { "User-Agent": "pi-web-lite" });
+	const mime = contentType.split(";", 1)[0].trim().toLowerCase();
+	if (mime === "text/html" || mime === "application/xhtml+xml" || (!mime && /^\s*<(?:!doctype\s+html|html|head|body)\b/i.test(text))) {
+		const converted = htmlToMarkdown(text, finalUrl, options);
+		return { url, ...converted };
 	}
 	return { url, title: url, content: text };
 }

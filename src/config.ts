@@ -16,6 +16,7 @@ export interface SearchDefaults {
 export interface FetchDefaults {
 	timeoutMs: number;
 	maxChars: number;
+	extractMainContent: boolean;
 }
 
 export interface WebLiteConfig {
@@ -28,7 +29,7 @@ export interface WebLiteConfig {
 
 const DEFAULT_PROVIDERS: Provider[] = ["exa", "tavily", "brave", "doubao"];
 const DEFAULT_SEARCH: SearchDefaults = { numResults: 5, timeoutMs: 20_000 };
-const DEFAULT_FETCH: FetchDefaults = { timeoutMs: 20_000, maxChars: 30_000 };
+const DEFAULT_FETCH: FetchDefaults = { timeoutMs: 20_000, maxChars: 30_000, extractMainContent: true };
 
 const LEGACY_FIELDS = [
 	"exaApiKey",
@@ -98,6 +99,14 @@ function normalizeNumber(value: unknown, fallback: number, name: string): number
 	return Math.floor(value);
 }
 
+function normalizeBoolean(value: unknown, fallback: boolean, name: string): boolean {
+	if (value === undefined) return fallback;
+	if (typeof value !== "boolean") {
+		throw new Error(`Invalid ${name} in ${CONFIG_PATH}: expected a boolean.`);
+	}
+	return value;
+}
+
 function assertNoLegacyFields(raw: Record<string, unknown>, sourcePath: string): void {
 	const found = LEGACY_FIELDS.filter((field) => field in raw);
 	if (found.length > 0) {
@@ -140,6 +149,7 @@ export function parseConfig(raw: unknown, sourcePath = CONFIG_PATH): WebLiteConf
 		fetch: {
 			timeoutMs: normalizeNumber(fetchRaw.timeoutMs, DEFAULT_FETCH.timeoutMs, "fetch.timeoutMs"),
 			maxChars: normalizeNumber(fetchRaw.maxChars, DEFAULT_FETCH.maxChars, "fetch.maxChars"),
+			extractMainContent: normalizeBoolean(fetchRaw.extractMainContent, DEFAULT_FETCH.extractMainContent, "fetch.extractMainContent"),
 		},
 	};
 }
