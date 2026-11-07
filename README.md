@@ -7,6 +7,8 @@ Lightweight web access package for Pi. It registers only two tools:
 
 No curator UI, no browser cookie access, no Gemini/Perplexity, no video analysis, no background servers, no storage cache, and no browser runtime required. HTML processing uses Turndown, its GFM plugin, Mozilla Readability, and Linkedom.
 
+The HTML converter and its parsing dependencies load only when `fetch` receives an HTML response. Extension startup, search, plain-text responses, and GitHub API/raw-file paths do not load them. The first HTML fetch pays the one-time module-loading cost; later HTML fetches reuse the module.
+
 ## Architecture
 
 ```mermaid

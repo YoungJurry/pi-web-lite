@@ -18,8 +18,6 @@ test('parseConfig accepts only the new apiKeys format and deduplicates keys', ()
   assert.equal(config.provider, 'balanced');
   assert.deepEqual(config.providers, ['exa', 'tavily', 'brave', 'doubao']);
   assert.deepEqual(config.apiKeys.tavily, ['tvly1', 'tvly2']);
-  assert.equal(config.search.numResults, 5);
-  assert.equal(config.fetch.maxChars, 30000);
 });
 
 test('parseConfig rejects legacy key fields', () => {

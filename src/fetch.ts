@@ -1,4 +1,3 @@
-import { htmlToMarkdown } from "./html.ts";
 import { requestSignal, truncateText } from "./utils.ts";
 
 export interface FetchOptions {
@@ -147,6 +146,8 @@ async function fetchGeneric(url: string, options: FetchOptions): Promise<Omit<Fe
 	const { text, contentType, finalUrl } = await fetchText(url, options, { "User-Agent": "pi-web-lite" });
 	const mime = contentType.split(";", 1)[0].trim().toLowerCase();
 	if (mime === "text/html" || mime === "application/xhtml+xml" || (!mime && /^\s*<(?:!doctype\s+html|html|head|body)\b/i.test(text))) {
+		// Intentional lazy-loading boundary: static imports load DOM parsers even for search and plain-text fetches.
+		const { htmlToMarkdown } = await import("./html.ts");
 		const converted = htmlToMarkdown(text, finalUrl, options);
 		return { url, ...converted };
 	}
