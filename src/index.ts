@@ -34,17 +34,11 @@ export default function (pi: ExtensionAPI) {
 	pi.registerTool({
 		name: "web_search",
 		label: "Web Search Lite",
-		// Deferred: not declared until `tool_search` loads it, so the schema costs
-		// nothing on turns that never search. The description is the BM25 document
-		// the search ranks, so it carries the words a query would use.
-		exposure: "deferred",
-		description:
-			"Search the web and return concise results with source links. Use for current information, news, documentation, or fact-checking. " +
-			"Keywords: web search, internet, google, look up, research, latest, online, browse.",
+		description: "Search the web and return concise results with source links. Use for current information, news, docs, or fact-checking.",
 		promptSnippet: "Search the web. Prefer queries with 2-4 distinct angles for research tasks.",
 		parameters: Type.Object({
-			query: Type.Optional(Type.String({ description: "Single search query. Prefer queries for multi-angle research." })),
-			queries: Type.Optional(Type.Array(Type.String(), { description: "Multiple search queries, executed independently." })),
+			query: Type.Optional(Type.String({ description: "Search query" })),
+			queries: Type.Optional(Type.Array(Type.String(), { description: "Several queries, run independently" })),
 		}),
 		renderCall(args, theme) {
 			const queries = normalizeList((args as { query?: unknown }).query, (args as { queries?: unknown }).queries);
@@ -119,16 +113,12 @@ export default function (pi: ExtensionAPI) {
 	pi.registerTool({
 		name: "fetch",
 		label: "Fetch",
-		// Deferred: see web_search above.
-		exposure: "deferred",
-		description:
-			"Fetch a URL and convert HTML to Markdown, main content by default (no page JavaScript). Use to read a specific link, page, or document. " +
-			"Keywords: fetch, url, http, https, download, page, link, website, read web, markdown, scrape.",
+		description: "Fetch a URL and convert HTML to Markdown (main content by default, no page JavaScript). Use to read a specific link, page, or document.",
 		promptSnippet: "Fetch the content of a specific URL.",
 		parameters: Type.Object({
-			url: Type.Optional(Type.String({ description: "Single URL to fetch" })),
-			urls: Type.Optional(Type.Array(Type.String(), { description: "Multiple URLs to fetch" })),
-			extractMainContent: Type.Optional(Type.Boolean({ description: "Extract main content from HTML; false keeps the whole page. Defaults to fetch.extractMainContent in config (true)." })),
+			url: Type.Optional(Type.String({ description: "URL to fetch" })),
+			urls: Type.Optional(Type.Array(Type.String(), { description: "Several URLs" })),
+			extractMainContent: Type.Optional(Type.Boolean({ description: "Main content only (default true); false keeps the whole page" })),
 		}),
 		renderCall(args, theme) {
 			const urls = normalizeList((args as { url?: unknown }).url, (args as { urls?: unknown }).urls);
