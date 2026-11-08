@@ -34,7 +34,13 @@ export default function (pi: ExtensionAPI) {
 	pi.registerTool({
 		name: "web_search",
 		label: "Web Search Lite",
-		description: "Search the web and return concise results with source links. Use multiple varied queries for broader research coverage.",
+		// Deferred: not declared until `tool_search` loads it, so the schema costs
+		// nothing on turns that never search. The description is the BM25 document
+		// the search ranks, so it carries the words a query would use.
+		exposure: "deferred",
+		description:
+			"Search the web and return concise results with source links. Use for current information, news, documentation, or fact-checking. " +
+			"Keywords: web search, internet, google, look up, research, latest, online, browse.",
 		promptSnippet: "Search the web. Prefer queries with 2-4 distinct angles for research tasks.",
 		parameters: Type.Object({
 			query: Type.Optional(Type.String({ description: "Single search query. Prefer queries for multi-angle research." })),
@@ -113,7 +119,11 @@ export default function (pi: ExtensionAPI) {
 	pi.registerTool({
 		name: "fetch",
 		label: "Fetch",
-		description: "Fetch URL content and convert HTML to Markdown, extracting main content by default. Set extractMainContent=false to read the whole page. Does not execute page JavaScript. Use this when the user asks to inspect a specific link.",
+		// Deferred: see web_search above.
+		exposure: "deferred",
+		description:
+			"Fetch a URL and convert HTML to Markdown, main content by default (no page JavaScript). Use to read a specific link, page, or document. " +
+			"Keywords: fetch, url, http, https, download, page, link, website, read web, markdown, scrape.",
 		promptSnippet: "Fetch the content of a specific URL.",
 		parameters: Type.Object({
 			url: Type.Optional(Type.String({ description: "Single URL to fetch" })),
