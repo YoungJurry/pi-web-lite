@@ -2,8 +2,8 @@
 
 Lightweight web access package for Pi. It registers only two tools:
 
-- `web_search` — search with Exa, Tavily, Brave Search, and Doubao Search
-- `fetch` — fetch URLs, convert HTML to Markdown, and optionally extract main content
+- `web_search` — run one query with Exa, Tavily, Brave Search, or Doubao Search
+- `fetch` — fetch one URL, convert HTML to Markdown, and optionally extract main content
 
 No curator UI, no browser cookie access, no Gemini/Perplexity, no video analysis, no background servers, no storage cache, and no browser runtime required. HTML processing uses Turndown, its GFM plugin, Mozilla Readability, and Linkedom.
 
@@ -126,22 +126,13 @@ Only Brave keys are used. No fallback to other providers.
 
 ## Tools
 
+Each call accepts one query or URL. To run independent requests concurrently, use Pi's Codemode with `Promise.all` (or `Promise.allSettled` to keep successes if some calls fail). Replace legacy `queries` and `urls` arrays with separate calls using `query` and `url`.
+
 ### `web_search`
 
 ```json
 {
   "query": "React 19 compiler pitfalls"
-}
-```
-
-or:
-
-```json
-{
-  "queries": [
-    "React 19 compiler performance",
-    "React 19 compiler migration pitfalls"
-  ]
 }
 ```
 
@@ -152,14 +143,6 @@ Provider, key, and result count are chosen by config only. The result includes a
 ```json
 {
   "url": "https://github.com/GATE"
-}
-```
-
-or:
-
-```json
-{
-  "urls": ["https://example.com", "https://github.com/owner/repo"]
 }
 ```
 
@@ -186,9 +169,9 @@ navigation, indexes, or a page whose extraction is incomplete:
 }
 ```
 
-The per-call option overrides the config default and applies to all URLs in a
-batch. `details.results[].extractedMainContent` indicates whether extraction
-succeeded for HTML pages. Truncation happens after Markdown conversion.
+The per-call option overrides the config default.
+`details.extractedMainContent` indicates whether extraction succeeded for HTML
+pages. Truncation happens after Markdown conversion.
 
 HTTP fetch and DOM parsing **do not execute JavaScript** or load subresources.
 Client-rendered pages may therefore return little content. No browser or external
